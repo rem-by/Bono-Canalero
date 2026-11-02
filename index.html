@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="R. Delmar">
+<meta name="description" content="Calcula tu salario bruto, horas extra, bonificaciones, deducciones de ley.">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Bono Canalero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: formulario a la izquierda, talonario de pago a la derecha; una sola columna en teléfono */
+:root{
+  --bg:#ffffff; --surface:#ffffff; --ink:#122033; --muted:#5a6779; --line:#d9e0ea;
+  --blue:#003f6b; --red:#ad1424;
+  --accent:#003f6b; --accent-soft:#e6eef5; --deduct:#ad1424; --deduct-soft:#fbe9eb;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:28px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,5vw,38px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.t-blue{color:var(--blue)} .t-red{color:var(--red)}
+header{border-bottom:4px solid var(--blue);box-shadow:0 6px 0 -2px var(--red);padding-bottom:16px;margin-bottom:6px}
+header p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+header .priv{font-size:13px;display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:99px;background:var(--accent-soft);color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+form{display:flex;flex-direction:column;gap:22px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+legend{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;padding:0}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:500;min-width:0}
+label.f small{color:var(--muted);font-weight:400;font-size:12px}
+.money{position:relative}
+.money span{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-num);font-size:13px;pointer-events:none}
+input[type=number],select{width:100%;font:inherit;font-family:var(--f-num);font-size:15px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:10px 11px;min-width:0}
+.money input{padding-left:38px}
+select{font-family:var(--f-body)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{flex:1;font:inherit;font-size:14px;font-weight:500;padding:9px 6px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.bono{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.bono .pct,.bono .ext{grid-column:1 / -1}
+.chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer;min-width:0}
+.chk input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.chk span{display:flex;flex-direction:column;font-size:14px;min-width:0}
+.chk strong{font-weight:600}
+.chk small{color:var(--muted);font-size:12px}
+.bono-v{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.hint b{font-family:var(--f-num);font-weight:600;color:var(--ink)}
+
+/* Talonario */
+.stub{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:sticky;top:max(16px, env(safe-area-inset-top, 0px))}
+@media (max-width:820px){.stub{position:static}}
+.stub-head{padding:20px 22px 18px;border-bottom:1px dashed var(--line);display:flex;flex-direction:column;gap:4px}
+.stub-head .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.net{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,7vw,46px);line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.net-sub{font-size:13px;color:var(--muted)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:12px;background:var(--line)}
+.bar i{display:block;height:100%;transition:width .3s}
+.bar .n{background:var(--accent)} .bar .d{background:var(--deduct)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px;background:var(--c)}
+.sec{padding:16px 22px;display:flex;flex-direction:column;gap:6px}
+.sec + .sec{border-top:1px solid var(--line)}
+.sec h3{margin:0 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.ln{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.ln .k{min-width:0}
+.ln .k small{color:var(--muted);font-size:12px;margin-left:4px}
+.ln .v{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ln.neg .v{color:var(--deduct)}
+.ln.tot{font-weight:600;padding-top:8px;margin-top:4px;border-top:1px solid var(--line)}
+.ln.tot .v{font-weight:600}
+.foot{padding:14px 22px 18px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.foot p{margin:0 0 6px;max-width:70ch}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:var(--deduct-soft);color:var(--deduct)}
+.autor{font-size:13px;color:var(--muted);text-align:center;padding-top:16px;border-top:1px solid var(--line)}
+.autor strong{color:var(--blue)}
+.btn-reset{align-self:flex-start;font:inherit;font-size:13px;color:var(--accent);background:none;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="t-blue">Bono</span> <span class="t-red">Canalero</span></h1>
+    <p>Calcula tu salario bruto, horas extra, bonificaciones, deducciones de ley.</p>
+    <p class="priv">No se guarda información personal. Los cálculos se hacen en tu dispositivo y no se envían a ningún lado.</p>
+  </header>
+
+  <div class="grid">
+    <form id="f" novalidate>
+      <span class="tag" id="ejemplo">Datos de ejemplo · cámbialos por los tuyos</span>
+
+      <fieldset>
+        <legend>Salario</legend>
+        <div class="row">
+          <label class="f">Rata por hora
+            <div class="money"><span>B/.</span><input type="number" id="rata" min="0" step="0.01" inputmode="decimal"></div>
+          </label>
+          <label class="f">Horas básicas
+            <input type="number" id="horasBase" value="80" readonly tabindex="-1" aria-readonly="true">
+          </label>
+        </div>
+        <p class="hint">Salario base de la bisemana: <b id="hora">B/. 0.00</b></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Horas extra en la bisemana</legend>
+        <div class="row">
+          <label class="f">Horas extra trabajadas
+            <input type="number" id="hx" min="0" step="0.5" inputmode="decimal">
+          </label>
+          <label class="f">Valor de la hora extra
+            <input type="number" id="hxValor" readonly tabindex="-1" aria-readonly="true">
+          </label>
+        </div>
+        <p class="hint">Cada hora extra se paga a 1.5 veces tu rata. El Código de Trabajo limita las horas extra a 3 diarias o 9 semanales.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Bonificaciones anuales</legend>
+        <p class="hint">Marca las que se cobran en esta bisemana. Salario anual: 80 h × rata × 26 pagos = <b id="anualTxt">B/. 0.00</b></p>
+        <div class="bono">
+          <label class="chk"><input type="checkbox" id="bAus"><span><strong>Bono por ausentismo</strong><small>Equivale a 80 horas básicas</small></span></label>
+          <span class="bono-v" id="bAusV">B/. 0.00</span>
+        </div>
+        <div class="bono">
+          <label class="chk"><input type="checkbox" id="bIdc"><span><strong>Bono de Índice de Desempeño Corporativo</strong><small>Porcentaje del salario anual</small></span></label>
+          <span class="bono-v" id="bIdcV">B/. 0.00</span>
+          <div class="seg pct" role="group" aria-label="Porcentaje del bono de desempeño">
+            <button type="button" data-pct="0" aria-pressed="false">0%</button>
+            <button type="button" data-pct="3" aria-pressed="false">3%</button>
+            <button type="button" data-pct="4" aria-pressed="true">4%</button>
+            <button type="button" data-pct="5" aria-pressed="false">5%</button>
+          </div>
+        </div>
+        <div class="bono">
+          <label class="chk"><input type="checkbox" id="bExt"><span><strong>Bono extraordinario</strong><small>Horas ganadas × tu rata</small></span></label>
+          <span class="bono-v" id="bExtV">B/. 0.00</span>
+          <label class="f ext">Horas del bono
+            <input type="number" id="hExt" min="0" step="0.5" inputmode="decimal">
+          </label>
+        </div>
+        <div class="bono">
+          <label class="chk"><input type="checkbox" id="bVale"><span><strong>Bono en Vale General</strong><small>Monto ganado en dólares</small></span></label>
+          <span class="bono-v" id="bValeV">B/. 0.00</span>
+          <label class="f ext">Monto del vale
+            <div class="money"><span>B/.</span><input type="number" id="mVale" min="0" step="0.01" inputmode="decimal"></div>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Otras deducciones de la bisemana</legend>
+        <div class="row">
+          <label class="f">Préstamos / descuentos directos
+            <div class="money"><span>B/.</span><input type="number" id="prestamo" min="0" step="0.01" inputmode="decimal"></div>
+          </label>
+          <label class="f">Otros descuentos
+            <div class="money"><span>B/.</span><input type="number" id="otros" min="0" step="0.01" inputmode="decimal"></div>
+          </label>
+        </div>
+      </fieldset>
+
+      <button type="button" class="btn-reset" id="limpiar">Limpiar todo</button>
+    </form>
+
+    <aside class="stub" aria-live="polite">
+      <div class="stub-head">
+        <span class="lbl">Salario neto bisemanal</span>
+        <span class="net" id="neto">B/. 0.00</span>
+        <span class="net-sub" id="netoSub"></span>
+        <div class="bar"><i class="n" id="barN"></i><i class="d" id="barD"></i></div>
+        <div class="legend"><span style="--c:var(--accent)">Neto</span><span style="--c:var(--deduct)">Deducciones</span></div>
+      </div>
+
+      <div class="sec">
+        <h3>Ingresos</h3>
+        <div class="ln"><span class="k">Salario base<small id="o-base-d"></small></span><span class="v" id="o-base"></span></div>
+        <div class="ln"><span class="k">Horas extra<small id="o-hx-d"></small></span><span class="v" id="o-hx"></span></div>
+        <div class="ln" id="r-aus"><span class="k">Bono por ausentismo</span><span class="v" id="o-aus"></span></div>
+        <div class="ln" id="r-ext"><span class="k">Bono extraordinario<small id="o-ext-d"></small></span><span class="v" id="o-ext"></span></div>
+        <div class="ln" id="r-vale"><span class="k">Bono en Vale General</span><span class="v" id="o-vale"></span></div>
+        <div class="ln" id="r-idc"><span class="k">Bono de desempeño<small id="o-idc-d"></small></span><span class="v" id="o-idc"></span></div>
+        <div class="ln tot"><span class="k">Salario bruto</span><span class="v" id="o-bruto"></span></div>
+      </div>
+
+      <div class="sec">
+        <h3>Deducciones</h3>
+        <div class="ln neg"><span class="k">Seguro Social<small>9.75%</small></span><span class="v" id="o-css"></span></div>
+        <div class="ln neg"><span class="k">Seguro Educativo<small>1.25%</small></span><span class="v" id="o-se"></span></div>
+        <div class="ln neg"><span class="k">Impuesto sobre la Renta<small id="o-isr-d"></small></span><span class="v" id="o-isr"></span></div>
+        <div class="ln neg"><span class="k">Préstamos y otros</span><span class="v" id="o-otr"></span></div>
+        <div class="ln tot neg"><span class="k">Total deducciones</span><span class="v" id="o-ded"></span></div>
+      </div>
+
+
+      <div class="foot">
+        <p>ISR según la tabla anual de la DGI: exento hasta B/. 11,000; 15% sobre lo que pase de B/. 11,000 hasta B/. 50,000; B/. 5,850 más 25% sobre lo que pase de B/. 50,000.</p>
+        <p>La renta anual se estima con el salario base de 26 bisemanas, los bonos anuales y las horas extra de esta bisemana. El Bono en Vale General no lleva Seguro Social, Seguro Educativo ni ISR. Los sobretiempos y diferenciales que se cobren durante el resto del año no están contemplados, así que quien supere los B/. 50,000 en el año puede tener una retención real mayor a la que muestra este cálculo.</p>
+        <p>Es un estimado. No incluye deducciones personales del ISR (intereses hipotecarios, gastos médicos, educación), que se aplican en la declaración anual.</p>
+      </div>
+    </aside>
+  </div>
+  <footer class="autor">Creado por <strong>R. Delmar</strong> · © 2026 Bono Canalero. Todos los derechos reservados.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CSS = 0.0975, SE = 0.0125;
+const HORAS = 80, PAGOS = 26;
+const fmt = n => "B/. " + (Math.round(n * 100) / 100).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const num = id => { const v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+const campos = ["rata","hx","hExt","mVale","prestamo","otros"];
+let pct = 4;
+const ejemplo = {rata:"5.00", hx:"4", prestamo:"", otros:"", bAus:false, bIdc:false, pct:4};
+
+// ISR anual según tramos de la DGI
+function isrAnual(renta) {
+  if (renta <= 11000) return 0;
+  if (renta <= 50000) return (renta - 11000) * 0.15;
+  return 5850 + (renta - 50000) * 0.25;
+}
+
+function calcular() {
+  const hora = num("rata");
+  const base = hora * HORAS;
+  const extras = num("hx") * hora * 1.5;
+  const anual = base * PAGOS;
+  const vAus = base, vIdc = anual * pct / 100;
+  const vExt = num("hExt") * hora;
+  const vVale = num("mVale");
+  const cAus = $("bAus").checked, cIdc = $("bIdc").checked, cExt = $("bExt").checked, cVale = $("bVale").checked;
+  const bonos = (cAus ? vAus : 0) + (cIdc ? vIdc : 0) + (cExt ? vExt : 0) + (cVale ? vVale : 0);
+  const bruto = base + extras + bonos;
+  // El Vale General no lleva Seguro Social, Seguro Educativo ni ISR
+  const brutoIsr = bruto - (cVale ? vVale : 0);
+  const css = brutoIsr * CSS, se = brutoIsr * SE;
+
+
+  // Proyección anual: 26 bisemanas
+  // Los bonos anuales se cuentan una sola vez en la renta del año
+  // El Vale General no se toma en cuenta para el ISR
+  const renta = (base + extras) * PAGOS + vAus + vIdc + vExt;
+  const impAnual = isrAnual(renta);
+  const isr = renta > 0 ? impAnual * brutoIsr / renta : 0;
+  const otros = num("prestamo") + num("otros");
+  const ded = css + se + isr + otros;
+  const neto = bruto - ded;
+
+  const totalHx = num("hx");
+  $("hxValor").value = (hora * 1.5).toFixed(2);
+  $("hora").textContent = fmt(base);
+  $("neto").textContent = fmt(neto);
+  $("netoSub").textContent = bruto > 0
+    ? `de ${fmt(bruto)} brutos · te descuentan ${(ded / bruto * 100).toFixed(1)}%`
+    : "Ingresa tu rata por hora para empezar";
+  const pN = bruto > 0 ? Math.max(0, neto) / bruto * 100 : 0;
+  $("barN").style.width = pN + "%";
+  $("barD").style.width = (bruto > 0 ? 100 - pN : 0) + "%";
+
+  $("o-base").textContent = fmt(base);
+  $("o-base-d").textContent = HORAS + " h × " + fmt(hora);
+  $("o-hx").textContent = fmt(extras);
+  $("o-hx-d").textContent = totalHx ? totalHx + " h" : "";
+  $("anualTxt").textContent = fmt(anual);
+  $("bAusV").textContent = fmt(vAus);
+  $("bIdcV").textContent = fmt(vIdc);
+  $("r-aus").hidden = !cAus; $("o-aus").textContent = fmt(vAus);
+  $("bExtV").textContent = fmt(vExt);
+  $("r-ext").hidden = !cExt; $("o-ext").textContent = fmt(vExt); $("o-ext-d").textContent = num("hExt") + " h";
+  $("bValeV").textContent = fmt(vVale);
+  $("r-vale").hidden = !cVale; $("o-vale").textContent = fmt(vVale);
+  $("r-idc").hidden = !cIdc; $("o-idc").textContent = fmt(vIdc); $("o-idc-d").textContent = pct + "%";
+  $("o-bruto").textContent = fmt(bruto);
+  $("o-css").textContent = "−" + fmt(css);
+  $("o-se").textContent = "−" + fmt(se);
+  $("o-isr").textContent = "−" + fmt(isr);
+  $("o-isr-d").textContent = impAnual > 0 ? "renta anual " + fmt(renta) : "exento";
+  $("o-otr").textContent = "−" + fmt(otros);
+  $("o-ded").textContent = "−" + fmt(ded);
+
+
+  guardar();
+}
+
+function guardar() {
+  try {
+    const d = {bAus: $("bAus").checked, bIdc: $("bIdc").checked, bExt: $("bExt").checked, bVale: $("bVale").checked, pct}; campos.forEach(c => d[c] = $(c).value);
+    localStorage.setItem("calc-salario-pa-bisemanal", JSON.stringify(d));
+  } catch (e) {}
+}
+
+function setPct(v) {
+  pct = v;
+  document.querySelectorAll(".pct button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.pct === v));
+}
+
+function cargar(d) {
+  campos.forEach(c => { if (d[c] !== undefined) $(c).value = d[c]; });
+  $("bAus").checked = !!d.bAus; $("bIdc").checked = !!d.bIdc; $("bExt").checked = !!d.bExt; $("bVale").checked = !!d.bVale;
+  setPct(d.pct !== undefined ? +d.pct : 4);
+}
+
+let guardado = null;
+try { guardado = JSON.parse(localStorage.getItem("calc-salario-pa-bisemanal")); } catch (e) {}
+if (guardado) { cargar(guardado); $("ejemplo").hidden = true; } else cargar(ejemplo);
+
+$("f").addEventListener("input", () => { $("ejemplo").hidden = true; calcular(); });
+$("f").addEventListener("submit", e => e.preventDefault());
+document.querySelectorAll(".pct button").forEach(b => b.addEventListener("click", () => {
+  setPct(+b.dataset.pct); $("ejemplo").hidden = true; calcular();
+}));
+$("limpiar").addEventListener("click", () => {
+  campos.forEach(c => $(c).value = "");
+  $("bAus").checked = false; $("bIdc").checked = false; $("bExt").checked = false; $("bVale").checked = false; setPct(4);
+  $("ejemplo").hidden = true; calcular();
+});
+calcular();
+</script>
+</body>
+</html>
