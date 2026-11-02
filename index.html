@@ -133,12 +133,24 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
             <input type="number" id="hxValor" readonly tabindex="-1" aria-readonly="true">
           </label>
         </div>
-        <p class="hint">Cada hora extra se paga a 1.5 veces tu rata. El Código de Trabajo limita las horas extra a 3 diarias o 9 semanales.</p>
+        <p class="hint">Total de horas extra: <b id="hxTotal">B/. 0.00</b></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Días feriados en la bisemana</legend>
+        <div class="row">
+          <label class="f">Horas en días feriados
+            <input type="number" id="hFer" min="0" step="0.5" inputmode="decimal">
+          </label>
+          <label class="f">Valor de la hora
+            <input type="number" id="ferValor" readonly tabindex="-1" aria-readonly="true">
+          </label>
+        </div>
+        <p class="hint">Total de días feriados: <b id="ferTotal">B/. 0.00</b></p>
       </fieldset>
 
       <fieldset>
         <legend>Bonificaciones anuales</legend>
-        <p class="hint">Marca las que se cobran en esta bisemana. Salario anual: 80 h × rata × 26 pagos = <b id="anualTxt">B/. 0.00</b></p>
         <div class="bono">
           <label class="chk"><input type="checkbox" id="bAus"><span><strong>Bono por ausentismo</strong><small>Equivale a 80 horas básicas</small></span></label>
           <span class="bono-v" id="bAusV">B/. 0.00</span>
@@ -197,6 +209,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
         <h3>Ingresos</h3>
         <div class="ln"><span class="k">Salario base<small id="o-base-d"></small></span><span class="v" id="o-base"></span></div>
         <div class="ln"><span class="k">Horas extra<small id="o-hx-d"></small></span><span class="v" id="o-hx"></span></div>
+        <div class="ln"><span class="k">Días feriados<small id="o-fer-d"></small></span><span class="v" id="o-fer"></span></div>
         <div class="ln" id="r-aus"><span class="k">Bono por ausentismo</span><span class="v" id="o-aus"></span></div>
         <div class="ln" id="r-ext"><span class="k">Bono extraordinario<small id="o-ext-d"></small></span><span class="v" id="o-ext"></span></div>
         <div class="ln" id="r-vale"><span class="k">Bono en Vale General</span><span class="v" id="o-vale"></span></div>
@@ -230,7 +243,7 @@ const CSS = 0.0975, SE = 0.0125;
 const HORAS = 80, PAGOS = 26;
 const fmt = n => "B/. " + (Math.round(n * 100) / 100).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const num = id => { const v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
-const campos = ["rata","hx","hExt","mVale","prestamo","otros"];
+const campos = ["rata","hx","hFer","hExt","mVale","prestamo","otros"];
 let pct = 4;
 const ejemplo = {rata:"5.00", hx:"4", prestamo:"", otros:"", bAus:false, bIdc:false, pct:4};
 
@@ -245,13 +258,14 @@ function calcular() {
   const hora = num("rata");
   const base = hora * HORAS;
   const extras = num("hx") * hora * 1.5;
+  const feriados = num("hFer") * hora;
   const anual = base * PAGOS;
   const vAus = base, vIdc = anual * pct / 100;
   const vExt = num("hExt") * hora;
   const vVale = num("mVale");
   const cAus = $("bAus").checked, cIdc = $("bIdc").checked, cExt = $("bExt").checked, cVale = $("bVale").checked;
   const bonos = (cAus ? vAus : 0) + (cIdc ? vIdc : 0) + (cExt ? vExt : 0) + (cVale ? vVale : 0);
-  const bruto = base + extras + bonos;
+  const bruto = base + extras + feriados + bonos;
   // El Vale General no lleva Seguro Social, Seguro Educativo ni ISR
   const brutoIsr = bruto - (cVale ? vVale : 0);
   const css = brutoIsr * CSS, se = brutoIsr * SE;
@@ -260,7 +274,7 @@ function calcular() {
   // Proyección anual: 26 bisemanas
   // Los bonos anuales se cuentan una sola vez en la renta del año
   // El Vale General no se toma en cuenta para el ISR
-  const renta = (base + extras) * PAGOS + vAus + vIdc + vExt;
+  const renta = (base + extras) * PAGOS + feriados + vAus + vIdc + vExt;
   const impAnual = isrAnual(renta);
   const isr = renta > 0 ? impAnual * brutoIsr / renta : 0;
   const otros = num("prestamo") + num("otros");
@@ -282,7 +296,11 @@ function calcular() {
   $("o-base-d").textContent = HORAS + " h × " + fmt(hora);
   $("o-hx").textContent = fmt(extras);
   $("o-hx-d").textContent = totalHx ? totalHx + " h" : "";
-  $("anualTxt").textContent = fmt(anual);
+  $("hxTotal").textContent = fmt(extras);
+  $("ferValor").value = hora.toFixed(2);
+  $("ferTotal").textContent = fmt(feriados);
+  $("o-fer").textContent = fmt(feriados);
+  $("o-fer-d").textContent = num("hFer") ? num("hFer") + " h" : "";
   $("bAusV").textContent = fmt(vAus);
   $("bIdcV").textContent = fmt(vIdc);
   $("r-aus").hidden = !cAus; $("o-aus").textContent = fmt(vAus);
